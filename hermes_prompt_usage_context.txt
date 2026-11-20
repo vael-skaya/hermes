@@ -1,0 +1,2038 @@
+﻿=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 521 ===
+        prompt_hash = hashlib.sha256(system_prompt.encode("utf-8")).hexdigest()
+        conn.execute(
+            "INSERT OR IGNORE INTO system_prompts (hash, prompt) VALUES (?, ?)",
+            (prompt_hash, system_prompt),
+        )
+        return prompt_hash
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 527 ===
+
+    @staticmethod
+    def _delete_unreferenced_system_prompts(conn) -> None:
+        conn.execute(
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 529 ===
+    def _delete_unreferenced_system_prompts(conn) -> None:
+        conn.execute(
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)"
+        )
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 530 ===
+        conn.execute(
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)"
+        )
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 531 ===
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)"
+        )
+
+    @staticmethod
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 456 ===
+);
+
+CREATE TABLE IF NOT EXISTS system_prompts (
+    hash TEXT PRIMARY KEY,
+    prompt TEXT NOT NULL
+);
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 478 ===
+    model_config TEXT,
+    system_prompt TEXT,
+    system_prompt_hash TEXT,
+    parent_session_id TEXT,
+    started_at REAL NOT NULL,
+    ended_at REAL,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 528 ===
+    transcript_revision INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (parent_session_id) REFERENCES sessions(id),
+    FOREIGN KEY (system_prompt_hash) REFERENCES system_prompts(hash)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 894 ===
+CREATE INDEX IF NOT EXISTS idx_sessions_handoff_state
+    ON sessions(handoff_state, started_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_system_prompt_hash
+    ON sessions(system_prompt_hash);
+CREATE INDEX IF NOT EXISTS idx_sessions_tool_names
+    ON sessions(tool_names);
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 895 ===
+    ON sessions(handoff_state, started_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_system_prompt_hash
+    ON sessions(system_prompt_hash);
+CREATE INDEX IF NOT EXISTS idx_sessions_tool_names
+    ON sessions(tool_names);
+-- Recent-session browsing must never derive recency by scanning messages.
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 256 ===
+                           AS _system_prompt_resolved
+                FROM sessions s
+                LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash
+                WHERE s.parent_session_id = ?
+                  AND s.ended_at IS NULL
+                """
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 338 ===
+                   if continuation and key in _CONVERSATION_MODEL_CONFIG_KEYS}
+        model_config = {**carried, **(model_config or {})}
+        system_prompt_hash = self._store_system_prompt(conn, system_prompt)
+        # Copy a real creating surface. Automatic compression passes the parent's live
+        # label (``local`` after the peer refresh); reset, branch and the compress
+        # mutation pass the policy label. ``local`` and ``unknown`` are not surfaces,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 352 ===
+            """INSERT INTO sessions (
+                   id, source, created_source, model, model_config, system_prompt,
+                   system_prompt_hash, tool_names,
+                   parent_session_id, cwd, git_branch, git_repo_root,
+                   profile_name, user_id, session_key, chat_id, chat_type,
+                   thread_id, display_name, origin_json, pinned, started_at,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 360 ===
+            (
+                child_session_id, source, created_source, model, json.dumps(model_config) if model_config else None,
+                system_prompt_hash, parent["tool_names"], parent_session_id, cwd or parent["cwd"], parent["git_branch"],
+                parent["git_repo_root"],
+                profile_name or parent["profile_name"] or self._own_profile_name(),
+                parent["user_id"], parent["session_key"], parent["chat_id"], parent["chat_type"],
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 50 ===
+                       )) AS _has_messages
+                FROM sessions s
+                LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash
+"""
+# A row a *completed handoff* owns stays recoverable whatever end_reason it carries: the source
+# interface's teardown runs AFTER ownership moved to the destination and can stamp a terminal reason
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 483 ===
+                   {_sql_session_last_active("sessions")} AS last_active
+            FROM sessions
+            LEFT JOIN system_prompts sp
+              ON sp.hash = sessions.system_prompt_hash
+            WHERE session_key IS NOT NULL
+              AND started_at = (
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 484 ===
+            FROM sessions
+            LEFT JOIN system_prompts sp
+              ON sp.hash = sessions.system_prompt_hash
+            WHERE session_key IS NOT NULL
+              AND started_at = (
+                  SELECT MAX(s2.started_at) FROM sessions s2
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 973 ===
+            rows = self._read_all(
+                "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved FROM sessions s "
+                "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+                "WHERE s.handoff_state = 'pending' "
+                "ORDER BY s.started_at ASC")
+            return [self._session_row_dict(r) for r in rows]
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_maintenance.py | Line 132 ===
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({_placeholders(chunk)})", chunk)
+            if ids:
+                self._delete_unreferenced_system_prompts(conn)
+            return ids
+        removed_ids = self._execute_write(_do) or []
+        emit_session_deleted(self, removed_ids, reason="ghost_prune", sessions_dir=sessions_dir)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_maintenance.py | Line 399 ===
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({ph})", chunk)
+                removed_ids.extend(chunk)
+            self._delete_unreferenced_system_prompts(conn)
+            return len(session_ids)
+        count = self._execute_write(_do)
+        if count:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_mutation_branch.py | Line 81 ===
+        model_config={'_branched_from': target}, system_prompt=None,
+        cwd=policy['cwd'], profile_name=parent['profile_name'])
+    conn.execute('UPDATE sessions SET session_key=?,chat_id=?,origin_json=?,system_prompt_hash=? WHERE id=?',
+                 (route, child, _json(source.to_dict()), parent['system_prompt_hash'], child))
+    ids, tools = db._tail_rows_after_watermark(conn,
+        'SELECT id,tool_calls FROM messages WHERE session_id=? AND active=1 AND id<=? ORDER BY id',
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_mutation_branch.py | Line 82 ===
+        cwd=policy['cwd'], profile_name=parent['profile_name'])
+    conn.execute('UPDATE sessions SET session_key=?,chat_id=?,origin_json=?,system_prompt_hash=? WHERE id=?',
+                 (route, child, _json(source.to_dict()), parent['system_prompt_hash'], child))
+    ids, tools = db._tail_rows_after_watermark(conn,
+        'SELECT id,tool_calls FROM messages WHERE session_id=? AND active=1 AND id<=? ORDER BY id',
+        [target, _branch_boundary(conn, target, payload.get('through_message_id'))])
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_mutation_retirement.py | Line 271 ===
+        conn.execute('DELETE FROM messages WHERE session_id=?', (sid,))
+    conn.executemany('DELETE FROM sessions WHERE id=?', [(sid,) for sid in targets])
+    db._delete_unreferenced_system_prompts(conn)
+    return set(), {'deleted_ids': targets}
+
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 45 ===
+_IMPORT_SESSION_INSERT_SQL = """INSERT INTO sessions (
+                           id, source, user_id, model, model_config, system_prompt,
+                           system_prompt_hash,
+                           parent_session_id, started_at, ended_at, end_reason,
+                           message_count, tool_call_count, input_tokens, output_tokens,
+                           cache_read_tokens, cache_write_tokens, reasoning_tokens,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 56 ===
+                       VALUES (
+                           :id, :source, :user_id, :model, :model_config,
+                           NULL, :system_prompt_hash, NULL, :started_at, :ended_at,
+                           :end_reason, 0, 0, :input_tokens, :output_tokens,
+                           :cache_read_tokens, :cache_write_tokens,
+                           :reasoning_tokens, :cwd, :git_branch, :git_repo_root,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 82 ===
+    None omits prompt columns AND the join), preview, last_active. Whitespace matches
+    the historical inline queries (SQL text is pinned)."""
+    prompt_join = "" if prompt_select is None else "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash"
+    return f"""
+            SELECT {select_cols}{prompt_select or ""},
+                {_sql_preview_raw()},
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 720 ===
+        params = {
+            "id": session_id, "source": str(raw.get("source") or "import"),
+            "system_prompt_hash": self._store_system_prompt(conn, raw.get("system_prompt")),
+            "started_at": time.time() if started_at is None else started_at,
+            **{col: 1 if self._coerce_or(raw.get(col), int, 0) else 0 for col in _IMPORT_FLAG_COLS},
+            **{col: raw.get(col) for col in _IMPORT_PASSTHROUGH_COLS},
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 219 ===
+                return None
+            def _stored(prompt_hash):
+                row = conn.execute("SELECT prompt FROM system_prompts WHERE hash = ?", (prompt_hash,)).fetchone()
+                return row[0] if row else None
+            prompt = _stored(session["system_prompt_hash"]) if session["system_prompt_hash"] else None
+            # The tools[] pin is content-addressed the same way; a legacy inline list resolves to None.
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 221 ===
+                row = conn.execute("SELECT prompt FROM system_prompts WHERE hash = ?", (prompt_hash,)).fetchone()
+                return row[0] if row else None
+            prompt = _stored(session["system_prompt_hash"]) if session["system_prompt_hash"] else None
+            # The tools[] pin is content-addressed the same way; a legacy inline list resolves to None.
+            tool_pin = _stored(session["tool_names"]) if session["tool_names"] else None
+            messages = [dict(r) for r in conn.execute(
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 259 ===
+                suffix = f" ({session_id[-12:]})"
+                session["title"] = title[:self.MAX_TITLE_LENGTH - len(suffix)] + suffix
+            session["system_prompt_hash"] = self._store_system_prompt(conn, payload.get("system_prompt"))
+            if payload.get("tool_pin") is not None or len(session.get("tool_names") or "") == 64:
+                # A pin hash means nothing in this store: re-store the pin, or drop an unresolvable ref.
+                session["tool_names"] = self._store_system_prompt(conn, payload.get("tool_pin"))
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 289 ===
+            conn.execute("DELETE FROM session_model_usage WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            self._delete_unreferenced_system_prompts(conn)
+            return True
+        deleted = self._execute_write(_do)
+        if deleted:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_prompt_refresh.py | Line 52 ===
+        """Sessions whose next turn would replay a stored prompt (the ones a refresh rebuilds)."""
+        row = self._read_one(
+            "SELECT COUNT(*) FROM sessions WHERE system_prompt_hash IS NOT NULL OR system_prompt IS NOT NULL"
+        )
+        return int(row[0]) if row else 0
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_schema.py | Line 189 ===
+    """See module docstring — mixin for SessionDB (Schema cluster)."""
+
+    def _dedupe_legacy_system_prompts(self, cursor: sqlite3.Cursor) -> None:
+        """Move inline prompt snapshots into the shared content-addressed table. Any
+        ``OperationalError`` mid-loop returns instead of raising: partial migration is safe
+        (the legacy column stays a read fallback; next init resumes), whereas propagating
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_schema.py | Line 202 ===
+                prompt_hash = self._store_system_prompt(cursor, prompt)
+                cursor.execute(
+                    "UPDATE sessions SET system_prompt_hash = ?, system_prompt = NULL WHERE id = ?",
+                    (prompt_hash, session_id),
+                )
+            except sqlite3.OperationalError as exc:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_schema.py | Line 1104 ===
+        if current_version < 25:
+            # v25: de-duplicate system prompt snapshots (old column stays a read fallback).
+            self._dedupe_legacy_system_prompts(cursor)
+        self._advance_message_uid_backfill(cursor)
+        fts_migrations_complete = True
+        if current_version < 30 and fts5_available:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 699 ===
+        def _do(conn):
+            conn.execute(
+                "UPDATE sessions SET system_prompt_hash = ?, system_prompt = NULL WHERE id = ?",
+                (self._store_system_prompt(conn, system_prompt), session_id),
+            )
+            self._delete_unreferenced_system_prompts(conn)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 702 ===
+                (self._store_system_prompt(conn, system_prompt), session_id),
+            )
+            self._delete_unreferenced_system_prompts(conn)
+        self._execute_write(_do)
+
+    def update_session_tool_names(self, session_id: str, pin: Any) -> None:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 708 ===
+        """Persist the session's ``tools[]`` pin (JSON-serializable) so a rebuilt AIAgent sends the
+        same bytes; ``None`` clears. The array repeats across sessions like a system prompt does, so it
+        is stored in the same content-addressed ``system_prompts`` table and the column holds its hash
+        (legacy rows: an inline JSON name list); ``get_session`` resolves either."""
+        payload = json.dumps(pin) if pin is not None else None
+        def _do(conn):
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 714 ===
+            conn.execute("UPDATE sessions SET tool_names = ? WHERE id = ?",
+                         (self._store_system_prompt(conn, payload), session_id))
+            self._delete_unreferenced_system_prompts(conn)
+        self._execute_write(_do)
+
+    def update_session_model(
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 840 ===
+            "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved, "
+            "COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "LEFT JOIN system_prompts tp ON tp.hash = s.tool_names WHERE s.id = ?",
+            (session_id,),
+        )
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 841 ===
+            "COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "LEFT JOIN system_prompts tp ON tp.hash = s.tool_names WHERE s.id = ?",
+            (session_id,),
+        )
+        return self._session_row_dict(row) if row else None
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1080 ===
+    # compact_rows excludes only payload-heavy blobs no list consumer renders.
+    _SESSION_COMPACT_EXCLUDED = frozenset(
+        {"system_prompt", "system_prompt_hash", "git_metadata_generation"}
+    )
+    _session_compact_cols_sql: Optional[str] = None
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1345 ===
+        )
+        prompt_join = (
+            "" if compact_rows else "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash"
+        )
+        from_sessions = f"FROM sessions s\n                {prompt_join}"
+        if order_by_last_active:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1565 ===
+            "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved, "
+            f"{_sql_session_last_active('s')} AS last_active "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            f"{_where_sql(where_clauses, ' ')} "
+            "ORDER BY last_active DESC, s.started_at DESC, s.id DESC LIMIT ? OFFSET ?",
+            [*params, limit, offset],
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1761 ===
+                conn.execute("DELETE FROM messages WHERE session_id = ?", (sid,))
+            conn.executemany("DELETE FROM sessions WHERE id = ?", [(sid,) for sid in scope])
+            self._delete_unreferenced_system_prompts(conn)
+            removed_ids.extend(scope)
+            return True
+        deleted = self._execute_write(_do)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1824 ===
+            retire_sessions(conn, [session_id], expiring=[session_id])
+            conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            self._delete_unreferenced_system_prompts(conn)
+            return True
+        deleted = self._execute_write(_do)
+        if deleted:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1909 ===
+                conn.execute(f"DELETE FROM messages WHERE session_id IN ({ph})", chunk)
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({ph})", chunk)
+            self._delete_unreferenced_system_prompts(conn)
+            removed_ids.extend(expanded)
+            # Count the ids the CALLER asked for, not the expanded chain links —
+            # the dashboard toast should say "3 deleted" when the user selected
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1958 ===
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({ph})", chunk)
+                removed_ids.extend(chunk)
+            self._delete_unreferenced_system_prompts(conn)
+            return len(session_ids)
+        count = self._execute_write(_do)
+        if count:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_telegram.py | Line 75 ===
+                        {_sql_session_last_active("s")} AS last_active
+                    FROM sessions s
+                    LEFT JOIN system_prompts sp
+                      ON sp.hash = s.system_prompt_hash
+                    WHERE s.source = 'telegram'
+                      AND s.user_id = ?
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_telegram.py | Line 76 ===
+                    FROM sessions s
+                    LEFT JOIN system_prompts sp
+                      ON sp.hash = s.system_prompt_hash
+                    WHERE s.source = 'telegram'
+                      AND s.user_id = ?
+"""
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_titles.py | Line 199 ===
+        row = self._read_one(
+            "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "WHERE s.title = ?", (title,))
+        return self._session_row_dict(row) if row else None
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 22 ===
+        'SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved, '
+        'COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved '
+        'FROM sessions s LEFT JOIN system_prompts sp ON sp.hash=s.system_prompt_hash '
+        'LEFT JOIN system_prompts tp ON tp.hash=s.tool_names WHERE s.id=?',
+        (session_id,),
+    ).fetchone()
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 23 ===
+        'COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved '
+        'FROM sessions s LEFT JOIN system_prompts sp ON sp.hash=s.system_prompt_hash '
+        'LEFT JOIN system_prompts tp ON tp.hash=s.tool_names WHERE s.id=?',
+        (session_id,),
+    ).fetchone()
+    return {'session': db._session_row_dict(row)}
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 33 ===
+            payload['system_prompt'] is None or isinstance(payload['system_prompt'], str)):
+        raise RuntimeStoreError('invalid_params')
+    conn.execute('UPDATE sessions SET system_prompt_hash=?, system_prompt=NULL WHERE id=?',
+                 (db._store_system_prompt(conn, payload['system_prompt']), session_id))
+    db._delete_unreferenced_system_prompts(conn)
+    return {'value': None}
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 35 ===
+    conn.execute('UPDATE sessions SET system_prompt_hash=?, system_prompt=NULL WHERE id=?',
+                 (db._store_system_prompt(conn, payload['system_prompt']), session_id))
+    db._delete_unreferenced_system_prompts(conn)
+    return {'value': None}
+
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 49 ===
+def worker_tool_names(db, conn, session_id, payload):
+    """The tools[] pin, same contract as ``SessionDB.update_session_tool_names``: any JSON pin
+    (``{"version", "tools"[, "delegation_backend"]}`` today; a legacy name list) content-addressed through ``system_prompts``,
+    ``None`` clears. Bounded so a worker cannot write an unbounded blob into the shared table."""
+    if set(payload) != {'tool_names'}:
+        raise RuntimeStoreError('invalid_params')
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 70 ===
+    conn.execute('UPDATE sessions SET tool_names=? WHERE id=?',
+                 (db._store_system_prompt(conn, encoded), session_id))
+    db._delete_unreferenced_system_prompts(conn)
+    return {'value': None}
+
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 229 ===
+    if not (profile_name or "").strip():
+        profile_name = self._own_profile_name()
+    system_prompt_hash = self._store_system_prompt(conn, system_prompt)
+    conn.execute(
+        """INSERT INTO sessions (
+           id, source, created_source, user_id, session_key, chat_id, chat_type, thread_id,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 233 ===
+        """INSERT INTO sessions (
+           id, source, created_source, user_id, session_key, chat_id, chat_type, thread_id,
+           model, model_config, system_prompt, system_prompt_hash,
+           parent_session_id, cwd, profile_name, transport_profile, git_repo_root,
+           origin_json, display_name, started_at
+        )
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 264 ===
+                   )
+               END,
+               system_prompt_hash = COALESCE(
+                   sessions.system_prompt_hash,
+                   excluded.system_prompt_hash
+               ),
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 265 ===
+               END,
+               system_prompt_hash = COALESCE(
+                   sessions.system_prompt_hash,
+                   excluded.system_prompt_hash
+               ),
+               system_prompt = CASE
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 266 ===
+               system_prompt_hash = COALESCE(
+                   sessions.system_prompt_hash,
+                   excluded.system_prompt_hash
+               ),
+               system_prompt = CASE
+                   WHEN sessions.system_prompt_hash IS NULL
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 269 ===
+               ),
+               system_prompt = CASE
+                   WHEN sessions.system_prompt_hash IS NULL
+                        AND excluded.system_prompt_hash IS NOT NULL
+                   THEN NULL
+                   ELSE sessions.system_prompt
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 270 ===
+               system_prompt = CASE
+                   WHEN sessions.system_prompt_hash IS NULL
+                        AND excluded.system_prompt_hash IS NOT NULL
+                   THEN NULL
+                   ELSE sessions.system_prompt
+               END,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 277 ===
+        (
+            session_id, source, source, user_id, session_key, chat_id, chat_type, thread_id, model,
+            json.dumps(model_config) if model_config else None, system_prompt_hash,
+            parent_session_id, cwd, profile_name, transport_profile, git_repo_root, origin_json,
+            display_name, time.time(),
+        ),
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 282 ===
+        ),
+    )
+    if system_prompt_hash is not None:
+        self._delete_unreferenced_system_prompts(conn)
+    if parent_session_id:
+        self._inherit_parent_session_metadata(conn, session_id)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 283 ===
+    )
+    if system_prompt_hash is not None:
+        self._delete_unreferenced_system_prompts(conn)
+    if parent_session_id:
+        self._inherit_parent_session_metadata(conn, session_id)
+    # The upsert may have just filled a compression tip's created_source (update_token_counts).
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\evals\compaction\scripts\reconstruct_lineage.py | Line 55 ===
+        row = db.execute(
+            "SELECT s.system_prompt, sp.prompt AS dedup_prompt FROM sessions s "
+            "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "WHERE s.id=?", (sid,)).fetchone()
+        if row:
+            sysprompt = row["system_prompt"] or row["dedup_prompt"] or None
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\evals\postmortem\forensics\common.py | Line 159 ===
+
+    def system_prompt_len(self, sid: str) -> int:
+        h = self.sessions[sid].get("system_prompt_hash")
+        if not h:
+            return 0
+        r = self._conn.execute("SELECT length(prompt) AS n FROM system_prompts WHERE hash=?", (h,)).fetchone()
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\evals\postmortem\forensics\common.py | Line 162 ===
+        if not h:
+            return 0
+        r = self._conn.execute("SELECT length(prompt) AS n FROM system_prompts WHERE hash=?", (h,)).fetchone()
+        return int(r["n"]) if r else 0
+
+    def by_depth(self) -> dict[int, list[str]]:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\evals\postmortem\tests\test_postmortem_harness.py | Line 22 ===
+    CREATE TABLE sessions(id TEXT PRIMARY KEY, parent_session_id TEXT, source TEXT, started_at REAL, ended_at REAL,
+        api_call_count INTEGER, input_tokens INTEGER, cache_read_tokens INTEGER, cache_write_tokens INTEGER,
+        output_tokens INTEGER, estimated_cost_usd REAL, system_prompt_hash TEXT);
+    CREATE TABLE system_prompts(hash TEXT PRIMARY KEY, prompt TEXT);
+    CREATE TABLE messages(id INTEGER PRIMARY KEY, session_id TEXT, role TEXT, content TEXT, tool_calls TEXT,
+        tool_name TEXT, reasoning TEXT, timestamp REAL);
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\evals\postmortem\tests\test_postmortem_harness.py | Line 23 ===
+        api_call_count INTEGER, input_tokens INTEGER, cache_read_tokens INTEGER, cache_write_tokens INTEGER,
+        output_tokens INTEGER, estimated_cost_usd REAL, system_prompt_hash TEXT);
+    CREATE TABLE system_prompts(hash TEXT PRIMARY KEY, prompt TEXT);
+    CREATE TABLE messages(id INTEGER PRIMARY KEY, session_id TEXT, role TEXT, content TEXT, tool_calls TEXT,
+        tool_name TEXT, reasoning TEXT, timestamp REAL);
+    CREATE TABLE state_meta(key TEXT PRIMARY KEY, value TEXT);
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\evals\postmortem\tests\test_postmortem_harness.py | Line 29 ===
+    """)
+    t0 = time.time() - 4000
+    c.execute("INSERT INTO system_prompts VALUES ('h1', ?)", ("x" * 35_000,))
+
+    def sess(sid, parent, source, start, end, calls, cr, cw, out):
+        cost = cr * 0.2e-6 + cw * 10e-6 + out * 40e-6
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_lost_and_found.py | Line 481 ===
+        "handoff_state": lambda value: value in _HANDOFF_STATES,
+        "parent_session_id": _is_session_id,
+        "system_prompt_hash": lambda value: bool(re.fullmatch(r"[0-9a-f]{64}", value)),
+        "model_config": _is_json_start, "origin_json": _is_json_start,
+        "cwd": _is_path, "git_repo_root": _is_path,
+        "billing_base_url": _is_url,
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_lost_and_found.py | Line 870 ===
+        )
+        dest.execute(
+            "UPDATE sessions SET system_prompt_hash = NULL WHERE system_prompt_hash IS NOT NULL AND NOT EXISTS "
+            "(SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)"
+        )
+        dest.execute(f"UPDATE sessions SET tool_names = NULL WHERE {_DANGLING_TOOL_PIN}")
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_lost_and_found.py | Line 871 ===
+        dest.execute(
+            "UPDATE sessions SET system_prompt_hash = NULL WHERE system_prompt_hash IS NOT NULL AND NOT EXISTS "
+            "(SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)"
+        )
+        dest.execute(f"UPDATE sessions SET tool_names = NULL WHERE {_DANGLING_TOOL_PIN}")
+    return result
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 27 ===
+ProgressCallback = Callable[[dict[str, Any]], None]
+_CANONICAL_TABLES = (
+    "system_prompts", "sessions", "messages", "session_model_usage", "compression_locks", "gateway_routing",
+    "async_delegations",
+)
+_TOPIC_TABLES = ("telegram_dm_topic_mode", "telegram_dm_topic_bindings")
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 754 ===
+_DEPENDENT_TABLES = ("messages", "session_model_usage", "compression_locks", "telegram_dm_topic_bindings")
+_DANGLING_TOOL_PIN = (
+    "length(tool_names) = 64 AND NOT EXISTS (SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.tool_names)")
+_RELINK_COUNTERS = ("session_prompt_refs_cleared", "sessions_parent_cleared")
+
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 762 ===
+    session row (placeholders are rebuilt first); only rows still orphaned after that are removed."""
+    result: dict[str, Any] = {
+        "session_prompt_refs_cleared": 0, "system_prompts_removed": 0, "sessions_parent_cleared": 0,
+        "sessions_reconstructed": 0, "messages_retained": 0,
+        **{f"{table}_removed": 0 for table in _DEPENDENT_TABLES},
+    }
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 777 ===
+        result["session_prompt_refs_cleared"] = _reconcile(
+            destination, "sessions",
+            "system_prompt_hash IS NOT NULL AND NOT EXISTS ("
+            "SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)",
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 778 ===
+            destination, "sessions",
+            "system_prompt_hash IS NOT NULL AND NOT EXISTS ("
+            "SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)",
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+        # A tools[] pin is a system_prompts row too, referenced by hash from sessions.tool_names
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 779 ===
+            "system_prompt_hash IS NOT NULL AND NOT EXISTS ("
+            "SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)",
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+        # A tools[] pin is a system_prompts row too, referenced by hash from sessions.tool_names
+        # (legacy rows hold an inline JSON list, never 64 chars of hex).
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 781 ===
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+        # A tools[] pin is a system_prompts row too, referenced by hash from sessions.tool_names
+        # (legacy rows hold an inline JSON list, never 64 chars of hex).
+        result["session_prompt_refs_cleared"] += _reconcile(
+            destination, "sessions",
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 788 ===
+            "UPDATE sessions SET tool_names = NULL",
+        )
+        result["system_prompts_removed"] = _reconcile(
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 789 ===
+        )
+        result["system_prompts_removed"] = _reconcile(
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 790 ===
+        result["system_prompts_removed"] = _reconcile(
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+        )
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 791 ===
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+        )
+        for table in _DEPENDENT_TABLES:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 792 ===
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+        )
+        for table in _DEPENDENT_TABLES:
+            if _table_columns(destination, table):
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\hermes_cli\session_schema_history.py | Line 197 ===
+            ('+', 'last_activity_provenance', 'last_activity_description'),
+        )),
+        ('20 2026-08-03T15:07Z 7d066c3c56', (('+', 'system_prompt_hash', 'system_prompt'),)),
+        ('21 2026-08-04T19:20Z d98287fe3c', (('+', 'last_read_at', 'pinned'),)),
+        ('22 2026-08-08T22:17Z fe42097865', (('+', 'title_source', 'title'),)),
+        ('23 2026-08-15T07:31Z fbaea9bddc', (('+', 'hidden', 'pinned'),)),
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\agent\test_length_continuation_thinking_exhaustion.py | Line 298 ===
+            f"reasoning must be restored on the very next request; got {wire!r}"
+        )
+        system_prompts = {
+            c.kwargs["messages"][0]["content"] for c in calls
+            if c.kwargs["messages"][0].get("role") == "system"
+        }
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\agent\test_length_continuation_thinking_exhaustion.py | Line 302 ===
+            if c.kwargs["messages"][0].get("role") == "system"
+        }
+        assert len(system_prompts) == 1, (
+            "system prompt must be byte-identical across the retry sequence "
+            "(the override may only change request parameters, never the prefix)"
+        )
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\gateway\test_managed_worker_construct.py | Line 170 ===
+        system = [m['content'] for m in request['messages'] if m['role'] == 'system']
+        prefill = [m['content'] for m in request['messages'] if 'PREFILL_' in str(m.get('content'))]
+        [(stored,)] = servers.query('SELECT p.prompt FROM sessions s JOIN system_prompts p '
+                                    'ON p.hash = s.system_prompt_hash WHERE s.id=?', (sid,))
+        return {'system_mark': [('SYS_PROMPT_MARK' in s) for s in system], 'prefill': prefill,
+                'stored': 'SYS_PROMPT_MARK' in stored}
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\gateway\test_managed_worker_construct.py | Line 171 ===
+        prefill = [m['content'] for m in request['messages'] if 'PREFILL_' in str(m.get('content'))]
+        [(stored,)] = servers.query('SELECT p.prompt FROM sessions s JOIN system_prompts p '
+                                    'ON p.hash = s.system_prompt_hash WHERE s.id=?', (sid,))
+        return {'system_mark': [('SYS_PROMPT_MARK' in s) for s in system], 'prefill': prefill,
+                'stored': 'SYS_PROMPT_MARK' in stored}
+    results = run_pair(tmp_path, extra, turn)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\gateway\test_tui_context_breakdown_scope.py | Line 97 ===
+@pytest.mark.asyncio
+async def test_agentless_breakdown_survives_a_swept_tools_pin(owner):
+    """A pin hash whose ``system_prompts`` row was swept resolves to the bare hash: no tools, no error."""
+    sid, stored = await _agentless_session(owner, 'swept', {'version': 'v', 'tools': [
+        {'type': 'function', 'function': {'name': 'terminal', 'parameters': {'type': 'object'}}}]})
+    owner.authority.db._execute_write(lambda conn: conn.execute(
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\gateway\test_tui_context_breakdown_scope.py | Line 101 ===
+        {'type': 'function', 'function': {'name': 'terminal', 'parameters': {'type': 'object'}}}]})
+    owner.authority.db._execute_write(lambda conn: conn.execute(
+        'DELETE FROM system_prompts WHERE hash = (SELECT tool_names FROM sessions WHERE id = ?)', (stored,)))
+    actual = await owner.call('session.context_breakdown', session_id=sid)
+    assert {c['id'] for c in actual['categories']} == {'system_prompt', 'conversation'}, actual
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_browse_schema_drift.py | Line 644 ===
+    path = _lagging_store_with_history(_profile_home(tmp_path), rows=10)
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("INSERT INTO system_prompts(hash, prompt) VALUES ('abc', 'retained prompt')")
+        conn.execute("ALTER TABLE system_prompts DROP COLUMN prompt")
+        conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_browse_schema_drift.py | Line 645 ===
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("INSERT INTO system_prompts(hash, prompt) VALUES ('abc', 'retained prompt')")
+        conn.execute("ALTER TABLE system_prompts DROP COLUMN prompt")
+        conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    before = _file_state(path)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_browse_schema_drift.py | Line 653 ===
+        _open_session_db_at_path(path, read_only=True).close()
+    assert caught.value.status_code == 503
+    assert "system_prompts.prompt" in str(caught.value.detail)
+    assert "nothing was changed" in str(caught.value.detail)
+    assert _file_state(path) == before
+    assert "last_read_at" not in _session_columns(path)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 611 ===
+        row = conn.execute(
+            "SELECT rootpage FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'system_prompts'"
+        ).fetchone()
+        assert row is not None
+        prompt_root = int(row[0])
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 631 ===
+    assert report["copy"]["sessions"]["status"] == "complete"
+    assert report["copy"]["messages"]["status"] == "complete"
+    assert report["copy"]["system_prompts"]["status"] == "partial"
+    cleared = report["orphan_cleanup"]["session_prompt_refs_cleared"]
+    assert 0 < cleared < session_count
+    assert report["verification"]["foreign_key_check"] == []
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 642 ===
+        assert conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == session_count
+        retained = conn.execute(
+            "SELECT COUNT(*) FROM sessions WHERE system_prompt_hash IS NOT NULL"
+        ).fetchone()[0]
+        assert retained == session_count - cleared
+        assert (
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 646 ===
+        assert retained == session_count - cleared
+        assert (
+            conn.execute("SELECT COUNT(*) FROM system_prompts").fetchone()[0]
+            == retained
+        )
+    finally:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery_lost_and_found.py | Line 956 ===
+    "compression_failure_error", "display_name", "origin_json",
+    "expiry_finalized", "compression_fallback_streak", "profile_name",
+    "compression_ineffective_count", "pinned", "system_prompt_hash",
+    "last_activity_at", "last_activity_description",
+    "last_activity_provenance", "git_metadata_generation", "title_source",
+    "hidden", "last_read_at",
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 24 ===
+def _prompt_count(db: SessionDB) -> int:
+    return int(
+        db._conn.execute("SELECT COUNT(*) FROM system_prompts").fetchone()[0]
+    )
+
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 42 ===
+
+    stored = db._conn.execute(
+        "SELECT hash, prompt FROM system_prompts"
+    ).fetchall()
+    assert len(stored) == 1
+    assert stored[0]["prompt"] == prompt
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 47 ===
+    assert stored[0]["prompt"] == prompt
+    raw_sessions = db._conn.execute(
+        "SELECT system_prompt, system_prompt_hash FROM sessions ORDER BY id"
+    ).fetchall()
+    assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+    assert {row["system_prompt_hash"] for row in raw_sessions} == {
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 50 ===
+    ).fetchall()
+    assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+    assert {row["system_prompt_hash"] for row in raw_sessions} == {
+        stored[0]["hash"]
+    }
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 110 ===
+    prompts = [
+        row["prompt"]
+        for row in db._conn.execute("SELECT prompt FROM system_prompts")
+    ]
+    assert prompts == ["original prompt"]
+    assert db.get_session("s1")["system_prompt"] == "original prompt"
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 183 ===
+
+    raw = db._conn.execute(
+        "SELECT system_prompt, system_prompt_hash FROM sessions WHERE id = 'child'"
+    ).fetchone()
+    assert raw["system_prompt"] is None
+    assert raw["system_prompt_hash"] is not None
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 186 ===
+    ).fetchone()
+    assert raw["system_prompt"] is None
+    assert raw["system_prompt_hash"] is not None
+    assert db.get_session("child")["system_prompt"] == prompt
+    assert _prompt_count(db) == 1
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 245 ===
+        assert _prompt_count(target) == 1
+        raw = target._conn.execute(
+            "SELECT system_prompt, system_prompt_hash FROM sessions ORDER BY id"
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw}) == 1
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 248 ===
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw}) == 1
+        assert target.get_session("s1")["system_prompt"] == prompt
+        assert target.get_session("s2")["system_prompt"] == prompt
+    finally:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 263 ===
+    db.create_session("s2", "telegram")
+    db._conn.execute(
+        "UPDATE sessions SET system_prompt = ?, system_prompt_hash = NULL",
+        (legacy_prompt,),
+    )
+    db._conn.execute("UPDATE schema_version SET version = 24")
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 276 ===
+        assert _prompt_count(migrated) == 1
+        raw_sessions = migrated._conn.execute(
+            "SELECT system_prompt, system_prompt_hash FROM sessions ORDER BY id"
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw_sessions}) == 1
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 279 ===
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw_sessions}) == 1
+        assert migrated._conn.execute(
+            "SELECT version FROM schema_version LIMIT 1"
+        ).fetchone()[0] == SCHEMA_VERSION
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 291 ===
+
+    def deny_prompt_reads(action, table, column, database, trigger):
+        if action == sqlite3.SQLITE_READ and table == "system_prompts":
+            return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 308 ===
+    assert rich["id"] == "s1"
+    assert "system_prompt" not in rows[0]
+    assert "system_prompt_hash" not in rows[0]
+    assert "system_prompt" not in rich
+    assert "system_prompt_hash" not in rich
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 310 ===
+    assert "system_prompt_hash" not in rows[0]
+    assert "system_prompt" not in rich
+    assert "system_prompt_hash" not in rich
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 4 ===
+
+Enterprise field report (2026-08-14): with state.db locked by another process,
+``_dedupe_legacy_system_prompts`` raised ``sqlite3.OperationalError``
+mid-loop (only the initial SELECT was guarded), which aborted schema init,
+left the schema version below 25, and made EVERY subsequent
+``SessionDB.__init__`` re-enter the same blocking migration — the fuel of
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 41 ===
+        )
+        cur.execute(
+            "UPDATE sessions SET system_prompt = ?, system_prompt_hash = NULL "
+            "WHERE id = ?",
+            (f"legacy prompt {i}", f"sess-{i}"),
+        )
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 82 ===
+        proxy = _FailAfterN(raw, fail_after=2)
+        # Must NOT raise even though the third UPDATE hits "database is locked".
+        db._dedupe_legacy_system_prompts(proxy)
+        conn.commit()
+
+        rows = raw.execute(
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 86 ===
+
+        rows = raw.execute(
+            "SELECT id, system_prompt, system_prompt_hash FROM sessions "
+            "WHERE id LIKE 'sess-%' ORDER BY id"
+        ).fetchall()
+        migrated = [r for r in rows if r["system_prompt"] is None]
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 94 ===
+        assert legacy, "expected unmigrated remainder after the failure"
+        # Migrated rows carry a hash; legacy rows keep their readable prompt.
+        assert all(r["system_prompt_hash"] for r in migrated)
+        assert all(r["system_prompt"].startswith("legacy prompt") for r in legacy)
+        conn.close()
+    finally:
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 108 ===
+        conn.row_factory = sqlite3.Row
+        raw = conn.cursor()
+        db._dedupe_legacy_system_prompts(_FailAfterN(raw, fail_after=2))
+        conn.commit()
+        # Second run with no failures finishes the job.
+        db._dedupe_legacy_system_prompts(raw)
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 111 ===
+        conn.commit()
+        # Second run with no failures finishes the job.
+        db._dedupe_legacy_system_prompts(raw)
+        conn.commit()
+        remaining = raw.execute(
+            "SELECT COUNT(*) FROM sessions "
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_runtime_worker_metadata.py | Line 62 ===
+        assert row['system_prompt'] == 'stable-prefix'
+        with db._read_ctx() as conn:
+            assert conn.execute('SELECT COUNT(*) FROM system_prompts WHERE prompt=?', ('stable-prefix',)).fetchone()[0] == 1
+        store.append_messages_batch('owned', [{'role': 'user', 'content': [{'type': 'text', 'text': 'visible'}]}])
+        assert store.set_latest_user_api_content('owned', 'wrong', 'must-not-land') == 0
+        assert store.set_latest_user_api_content('owned', [{'type': 'text', 'text': 'visible'}], 'wire-only') == 1
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_state_db_repair_live_writer_guard.py | Line 5 ===
+
+Incident (2026-08-18/19): FTS5 shadow-table corruption escalated into b-tree
+page damage across `system_prompts`, `session_model_usage` and the `sessions`
+index. `repair_state_db_schema` ran its REINDEX/FTS-rebuild strategies while
+other connections still held the database open. The caller closes only its own
+`self._conn`; the incident process held seven descriptors on state.db.
+
+=== OLD | C:\Users\sakha\AppData\Local\hermes\hermes-agent\tests\tools\test_refresh_agent_mcp_tools.py | Line 440 ===
+            _mcp_agent.persist_agent_tool_names(sent)
+        # Stored once, like the system prompt: a ~50KB array per session row would bloat state.db.
+        stored = db._conn.execute("SELECT COUNT(*) FROM system_prompts").fetchone()[0]
+
+        resumed = _agent([])
+        resumed.tools, resumed._session_db, resumed.session_id = list(this_surface), db, "s1"
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 521 ===
+        prompt_hash = hashlib.sha256(system_prompt.encode("utf-8")).hexdigest()
+        conn.execute(
+            "INSERT OR IGNORE INTO system_prompts (hash, prompt) VALUES (?, ?)",
+            (prompt_hash, system_prompt),
+        )
+        return prompt_hash
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 527 ===
+
+    @staticmethod
+    def _delete_unreferenced_system_prompts(conn) -> None:
+        conn.execute(
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 529 ===
+    def _delete_unreferenced_system_prompts(conn) -> None:
+        conn.execute(
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)"
+        )
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 530 ===
+        conn.execute(
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)"
+        )
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state.py | Line 531 ===
+            "DELETE FROM system_prompts WHERE NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) AND NOT EXISTS ("
+            "SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)"
+        )
+
+    @staticmethod
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 462 ===
+);
+
+CREATE TABLE IF NOT EXISTS system_prompts (
+    hash TEXT PRIMARY KEY,
+    prompt TEXT NOT NULL
+);
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 484 ===
+    model_config TEXT,
+    system_prompt TEXT,
+    system_prompt_hash TEXT,
+    parent_session_id TEXT,
+    started_at REAL NOT NULL,
+    ended_at REAL,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 534 ===
+    transcript_revision INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (parent_session_id) REFERENCES sessions(id),
+    FOREIGN KEY (system_prompt_hash) REFERENCES system_prompts(hash)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 909 ===
+CREATE INDEX IF NOT EXISTS idx_sessions_handoff_state
+    ON sessions(handoff_state, started_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_system_prompt_hash
+    ON sessions(system_prompt_hash);
+CREATE INDEX IF NOT EXISTS idx_sessions_tool_names
+    ON sessions(tool_names);
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_common.py | Line 910 ===
+    ON sessions(handoff_state, started_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_system_prompt_hash
+    ON sessions(system_prompt_hash);
+CREATE INDEX IF NOT EXISTS idx_sessions_tool_names
+    ON sessions(tool_names);
+-- Recent-session browsing must never derive recency by scanning messages.
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 256 ===
+                           AS _system_prompt_resolved
+                FROM sessions s
+                LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash
+                WHERE s.parent_session_id = ?
+                  AND s.ended_at IS NULL
+                """
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 338 ===
+                   if continuation and key in _CONVERSATION_MODEL_CONFIG_KEYS}
+        model_config = {**carried, **(model_config or {})}
+        system_prompt_hash = self._store_system_prompt(conn, system_prompt)
+        # Copy a real creating surface. Automatic compression passes the parent's live
+        # label (``local`` after the peer refresh); reset, branch and the compress
+        # mutation pass the policy label. ``local`` and ``unknown`` are not surfaces,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 352 ===
+            """INSERT INTO sessions (
+                   id, source, created_source, model, model_config, system_prompt,
+                   system_prompt_hash, tool_names,
+                   parent_session_id, cwd, git_branch, git_repo_root,
+                   profile_name, user_id, session_key, chat_id, chat_type,
+                   thread_id, display_name, origin_json, pinned, started_at,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_compression.py | Line 360 ===
+            (
+                child_session_id, source, created_source, model, json.dumps(model_config) if model_config else None,
+                system_prompt_hash, parent["tool_names"], parent_session_id, cwd or parent["cwd"], parent["git_branch"],
+                parent["git_repo_root"],
+                profile_name or parent["profile_name"] or self._own_profile_name(),
+                parent["user_id"], parent["session_key"], parent["chat_id"], parent["chat_type"],
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 51 ===
+                       )) AS _has_messages
+                FROM sessions s
+                LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash
+"""
+# A row a *completed handoff* owns stays recoverable whatever end_reason it carries: the source
+# interface's teardown runs AFTER ownership moved to the destination and can stamp a terminal reason
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 541 ===
+                   {_sql_session_last_active("sessions")} AS last_active
+            FROM sessions
+            LEFT JOIN system_prompts sp
+              ON sp.hash = sessions.system_prompt_hash
+            WHERE session_key IS NOT NULL
+              AND started_at = (
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 542 ===
+            FROM sessions
+            LEFT JOIN system_prompts sp
+              ON sp.hash = sessions.system_prompt_hash
+            WHERE session_key IS NOT NULL
+              AND started_at = (
+                  SELECT MAX(s2.started_at) FROM sessions s2
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_gateway.py | Line 1030 ===
+            rows = self._read_all(
+                "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved FROM sessions s "
+                "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+                "WHERE s.handoff_state = 'pending' "
+                "ORDER BY s.started_at ASC")
+            return [self._session_row_dict(r) for r in rows]
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_maintenance.py | Line 132 ===
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({_placeholders(chunk)})", chunk)
+            if ids:
+                self._delete_unreferenced_system_prompts(conn)
+            return ids
+        removed_ids = self._execute_write(_do) or []
+        emit_session_deleted(self, removed_ids, reason="ghost_prune", sessions_dir=sessions_dir)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_maintenance.py | Line 404 ===
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({ph})", chunk)
+                removed_ids.extend(chunk)
+            self._delete_unreferenced_system_prompts(conn)
+            return len(session_ids)
+        count = self._execute_write(_do)
+        if count:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_mutation_branch.py | Line 81 ===
+        model_config={'_branched_from': target}, system_prompt=None,
+        cwd=policy['cwd'], profile_name=parent['profile_name'])
+    conn.execute('UPDATE sessions SET session_key=?,chat_id=?,origin_json=?,system_prompt_hash=? WHERE id=?',
+                 (route, child, _json(source.to_dict()), parent['system_prompt_hash'], child))
+    ids, tools = db._tail_rows_after_watermark(conn,
+        'SELECT id,tool_calls FROM messages WHERE session_id=? AND active=1 AND id<=? ORDER BY id',
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_mutation_branch.py | Line 82 ===
+        cwd=policy['cwd'], profile_name=parent['profile_name'])
+    conn.execute('UPDATE sessions SET session_key=?,chat_id=?,origin_json=?,system_prompt_hash=? WHERE id=?',
+                 (route, child, _json(source.to_dict()), parent['system_prompt_hash'], child))
+    ids, tools = db._tail_rows_after_watermark(conn,
+        'SELECT id,tool_calls FROM messages WHERE session_id=? AND active=1 AND id<=? ORDER BY id',
+        [target, _branch_boundary(conn, target, payload.get('through_message_id'))])
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_mutation_retirement.py | Line 271 ===
+        conn.execute('DELETE FROM messages WHERE session_id=?', (sid,))
+    conn.executemany('DELETE FROM sessions WHERE id=?', [(sid,) for sid in targets])
+    db._delete_unreferenced_system_prompts(conn)
+    return set(), {'deleted_ids': targets}
+
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 45 ===
+_IMPORT_SESSION_INSERT_SQL = """INSERT INTO sessions (
+                           id, source, user_id, model, model_config, system_prompt,
+                           system_prompt_hash,
+                           parent_session_id, started_at, ended_at, end_reason,
+                           message_count, tool_call_count, input_tokens, output_tokens,
+                           cache_read_tokens, cache_write_tokens, reasoning_tokens,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 56 ===
+                       VALUES (
+                           :id, :source, :user_id, :model, :model_config,
+                           NULL, :system_prompt_hash, NULL, :started_at, :ended_at,
+                           :end_reason, 0, 0, :input_tokens, :output_tokens,
+                           :cache_read_tokens, :cache_write_tokens,
+                           :reasoning_tokens, :cwd, :git_branch, :git_repo_root,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 82 ===
+    None omits prompt columns AND the join), preview, last_active. Whitespace matches
+    the historical inline queries (SQL text is pinned)."""
+    prompt_join = "" if prompt_select is None else "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash"
+    return f"""
+            SELECT {select_cols}{prompt_select or ""},
+                {_sql_preview_raw()},
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_portability.py | Line 720 ===
+        params = {
+            "id": session_id, "source": str(raw.get("source") or "import"),
+            "system_prompt_hash": self._store_system_prompt(conn, raw.get("system_prompt")),
+            "started_at": time.time() if started_at is None else started_at,
+            **{col: 1 if self._coerce_or(raw.get(col), int, 0) else 0 for col in _IMPORT_FLAG_COLS},
+            **{col: raw.get(col) for col in _IMPORT_PASSTHROUGH_COLS},
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 219 ===
+                return None
+            def _stored(prompt_hash):
+                row = conn.execute("SELECT prompt FROM system_prompts WHERE hash = ?", (prompt_hash,)).fetchone()
+                return row[0] if row else None
+            prompt = _stored(session["system_prompt_hash"]) if session["system_prompt_hash"] else None
+            # The tools[] pin is content-addressed the same way; a legacy inline list resolves to None.
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 221 ===
+                row = conn.execute("SELECT prompt FROM system_prompts WHERE hash = ?", (prompt_hash,)).fetchone()
+                return row[0] if row else None
+            prompt = _stored(session["system_prompt_hash"]) if session["system_prompt_hash"] else None
+            # The tools[] pin is content-addressed the same way; a legacy inline list resolves to None.
+            tool_pin = _stored(session["tool_names"]) if session["tool_names"] else None
+            messages = [dict(r) for r in conn.execute(
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 259 ===
+                suffix = f" ({session_id[-12:]})"
+                session["title"] = title[:self.MAX_TITLE_LENGTH - len(suffix)] + suffix
+            session["system_prompt_hash"] = self._store_system_prompt(conn, payload.get("system_prompt"))
+            if payload.get("tool_pin") is not None or len(session.get("tool_names") or "") == 64:
+                # A pin hash means nothing in this store: re-store the pin, or drop an unresolvable ref.
+                session["tool_names"] = self._store_system_prompt(conn, payload.get("tool_pin"))
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_profile_repair.py | Line 289 ===
+            conn.execute("DELETE FROM session_model_usage WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            self._delete_unreferenced_system_prompts(conn)
+            return True
+        deleted = self._execute_write(_do)
+        if deleted:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_prompt_refresh.py | Line 52 ===
+        """Sessions whose next turn would replay a stored prompt (the ones a refresh rebuilds)."""
+        row = self._read_one(
+            "SELECT COUNT(*) FROM sessions WHERE system_prompt_hash IS NOT NULL OR system_prompt IS NOT NULL"
+        )
+        return int(row[0]) if row else 0
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_schema.py | Line 190 ===
+    """See module docstring — mixin for SessionDB (Schema cluster)."""
+
+    def _dedupe_legacy_system_prompts(self, cursor: sqlite3.Cursor) -> None:
+        """Move inline prompt snapshots into the shared content-addressed table. Any
+        ``OperationalError`` mid-loop returns instead of raising: partial migration is safe
+        (the legacy column stays a read fallback; next init resumes), whereas propagating
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_schema.py | Line 203 ===
+                prompt_hash = self._store_system_prompt(cursor, prompt)
+                cursor.execute(
+                    "UPDATE sessions SET system_prompt_hash = ?, system_prompt = NULL WHERE id = ?",
+                    (prompt_hash, session_id),
+                )
+            except sqlite3.OperationalError as exc:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_schema.py | Line 1074 ===
+        if current_version < 25:
+            # v25: de-duplicate system prompt snapshots (old column stays a read fallback).
+            self._dedupe_legacy_system_prompts(cursor)
+        if current_version < 33:
+            # v33: re-tag delegate subagent rows whose reservation-time row lost ``_delegate_from`` to the
+            # keep-existing upsert (an early first-turn model_config patch froze it). Untagged, the parent's
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 701 ===
+        def _do(conn):
+            conn.execute(
+                "UPDATE sessions SET system_prompt_hash = ?, system_prompt = NULL WHERE id = ?",
+                (self._store_system_prompt(conn, system_prompt), session_id),
+            )
+            self._delete_unreferenced_system_prompts(conn)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 704 ===
+                (self._store_system_prompt(conn, system_prompt), session_id),
+            )
+            self._delete_unreferenced_system_prompts(conn)
+        self._execute_write(_do)
+
+    def update_session_tool_names(self, session_id: str, pin: Any) -> None:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 710 ===
+        """Persist the session's ``tools[]`` pin (JSON-serializable) so a rebuilt AIAgent sends the
+        same bytes; ``None`` clears. The array repeats across sessions like a system prompt does, so it
+        is stored in the same content-addressed ``system_prompts`` table and the column holds its hash
+        (legacy rows: an inline JSON name list); ``get_session`` resolves either."""
+        payload = json.dumps(pin) if pin is not None else None
+        def _do(conn):
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 716 ===
+            conn.execute("UPDATE sessions SET tool_names = ? WHERE id = ?",
+                         (self._store_system_prompt(conn, payload), session_id))
+            self._delete_unreferenced_system_prompts(conn)
+        self._execute_write(_do)
+
+    def update_session_model(
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 842 ===
+            "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved, "
+            "COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "LEFT JOIN system_prompts tp ON tp.hash = s.tool_names WHERE s.id = ?",
+            (session_id,),
+        )
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 843 ===
+            "COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "LEFT JOIN system_prompts tp ON tp.hash = s.tool_names WHERE s.id = ?",
+            (session_id,),
+        )
+        return self._session_row_dict(row) if row else None
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1086 ===
+    # compact_rows excludes only payload-heavy blobs no list consumer renders.
+    _SESSION_COMPACT_EXCLUDED = frozenset(
+        {"system_prompt", "system_prompt_hash", "git_metadata_generation"}
+    )
+    _session_compact_cols_sql: Optional[str] = None
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1355 ===
+        )
+        prompt_join = (
+            "" if compact_rows else "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash"
+        )
+        from_sessions = f"FROM sessions s\n                {prompt_join}"
+        if order_by_last_active:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1576 ===
+            "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved, "
+            f"{_sql_session_last_active('s')} AS last_active "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            f"{_where_sql(where_clauses, ' ')} "
+            "ORDER BY last_active DESC, s.started_at DESC, s.id DESC LIMIT ? OFFSET ?",
+            [*params, limit, offset],
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1772 ===
+                conn.execute("DELETE FROM messages WHERE session_id = ?", (sid,))
+            conn.executemany("DELETE FROM sessions WHERE id = ?", [(sid,) for sid in scope])
+            self._delete_unreferenced_system_prompts(conn)
+            removed_ids.extend(scope)
+            return True
+        deleted = self._execute_write(_do)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1835 ===
+            retire_sessions(conn, [session_id], expiring=[session_id])
+            conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            self._delete_unreferenced_system_prompts(conn)
+            return True
+        deleted = self._execute_write(_do)
+        if deleted:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1920 ===
+                conn.execute(f"DELETE FROM messages WHERE session_id IN ({ph})", chunk)
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({ph})", chunk)
+            self._delete_unreferenced_system_prompts(conn)
+            removed_ids.extend(expanded)
+            # Count the ids the CALLER asked for, not the expanded chain links —
+            # the dashboard toast should say "3 deleted" when the user selected
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_sessions.py | Line 1969 ===
+                conn.execute(f"DELETE FROM sessions WHERE id IN ({ph})", chunk)
+                removed_ids.extend(chunk)
+            self._delete_unreferenced_system_prompts(conn)
+            return len(session_ids)
+        count = self._execute_write(_do)
+        if count:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_telegram.py | Line 75 ===
+                        {_sql_session_last_active("s")} AS last_active
+                    FROM sessions s
+                    LEFT JOIN system_prompts sp
+                      ON sp.hash = s.system_prompt_hash
+                    WHERE s.source = 'telegram'
+                      AND s.user_id = ?
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_telegram.py | Line 76 ===
+                    FROM sessions s
+                    LEFT JOIN system_prompts sp
+                      ON sp.hash = s.system_prompt_hash
+                    WHERE s.source = 'telegram'
+                      AND s.user_id = ?
+"""
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_titles.py | Line 254 ===
+        row = self._read_one(
+            "SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved "
+            "FROM sessions s LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "WHERE s.title = ?", (title,))
+        if not row:
+            return None
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 22 ===
+        'SELECT s.*, COALESCE(sp.prompt, s.system_prompt) AS _system_prompt_resolved, '
+        'COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved '
+        'FROM sessions s LEFT JOIN system_prompts sp ON sp.hash=s.system_prompt_hash '
+        'LEFT JOIN system_prompts tp ON tp.hash=s.tool_names WHERE s.id=?',
+        (session_id,),
+    ).fetchone()
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 23 ===
+        'COALESCE(tp.prompt, s.tool_names) AS _tool_names_resolved '
+        'FROM sessions s LEFT JOIN system_prompts sp ON sp.hash=s.system_prompt_hash '
+        'LEFT JOIN system_prompts tp ON tp.hash=s.tool_names WHERE s.id=?',
+        (session_id,),
+    ).fetchone()
+    return {'session': db._session_row_dict(row)}
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 33 ===
+            payload['system_prompt'] is None or isinstance(payload['system_prompt'], str)):
+        raise RuntimeStoreError('invalid_params')
+    conn.execute('UPDATE sessions SET system_prompt_hash=?, system_prompt=NULL WHERE id=?',
+                 (db._store_system_prompt(conn, payload['system_prompt']), session_id))
+    db._delete_unreferenced_system_prompts(conn)
+    return {'value': None}
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 35 ===
+    conn.execute('UPDATE sessions SET system_prompt_hash=?, system_prompt=NULL WHERE id=?',
+                 (db._store_system_prompt(conn, payload['system_prompt']), session_id))
+    db._delete_unreferenced_system_prompts(conn)
+    return {'value': None}
+
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 49 ===
+def worker_tool_names(db, conn, session_id, payload):
+    """The tools[] pin, same contract as ``SessionDB.update_session_tool_names``: any JSON pin
+    (``{"version", "tools"[, "delegation_backend"]}`` today; a legacy name list) content-addressed through ``system_prompts``,
+    ``None`` clears. Bounded so a worker cannot write an unbounded blob into the shared table."""
+    if set(payload) != {'tool_names'}:
+        raise RuntimeStoreError('invalid_params')
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_context.py | Line 70 ===
+    conn.execute('UPDATE sessions SET tool_names=? WHERE id=?',
+                 (db._store_system_prompt(conn, encoded), session_id))
+    db._delete_unreferenced_system_prompts(conn)
+    return {'value': None}
+
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 230 ===
+    if not (profile_name or "").strip():
+        profile_name = self._own_profile_name()
+    system_prompt_hash = self._store_system_prompt(conn, system_prompt)
+    conn.execute(
+        """INSERT INTO sessions (
+           id, source, created_source, user_id, session_key, chat_id, chat_type, thread_id,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 234 ===
+        """INSERT INTO sessions (
+           id, source, created_source, user_id, session_key, chat_id, chat_type, thread_id,
+           model, model_config, system_prompt, system_prompt_hash,
+           parent_session_id, cwd, profile_name, transport_profile, git_repo_root,
+           origin_json, display_name, started_at
+        )
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 265 ===
+                   )
+               END,
+               system_prompt_hash = COALESCE(
+                   sessions.system_prompt_hash,
+                   excluded.system_prompt_hash
+               ),
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 266 ===
+               END,
+               system_prompt_hash = COALESCE(
+                   sessions.system_prompt_hash,
+                   excluded.system_prompt_hash
+               ),
+               system_prompt = CASE
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 267 ===
+               system_prompt_hash = COALESCE(
+                   sessions.system_prompt_hash,
+                   excluded.system_prompt_hash
+               ),
+               system_prompt = CASE
+                   WHEN sessions.system_prompt_hash IS NULL
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 270 ===
+               ),
+               system_prompt = CASE
+                   WHEN sessions.system_prompt_hash IS NULL
+                        AND excluded.system_prompt_hash IS NOT NULL
+                   THEN NULL
+                   ELSE sessions.system_prompt
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 271 ===
+               system_prompt = CASE
+                   WHEN sessions.system_prompt_hash IS NULL
+                        AND excluded.system_prompt_hash IS NOT NULL
+                   THEN NULL
+                   ELSE sessions.system_prompt
+               END,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 278 ===
+        (
+            session_id, source, source, user_id, session_key, chat_id, chat_type, thread_id, model,
+            json.dumps(model_config) if model_config else None, system_prompt_hash,
+            parent_session_id, cwd, profile_name, transport_profile, git_repo_root, origin_json,
+            display_name, time.time(),
+        ),
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 283 ===
+        ),
+    )
+    if system_prompt_hash is not None:
+        self._delete_unreferenced_system_prompts(conn)
+    if parent_session_id:
+        self._inherit_parent_session_metadata(conn, session_id)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_state_worker_lifecycle.py | Line 284 ===
+    )
+    if system_prompt_hash is not None:
+        self._delete_unreferenced_system_prompts(conn)
+    if parent_session_id:
+        self._inherit_parent_session_metadata(conn, session_id)
+    # The upsert may have just filled a compression tip's created_source (update_token_counts).
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\evals\compaction\scripts\reconstruct_lineage.py | Line 55 ===
+        row = db.execute(
+            "SELECT s.system_prompt, sp.prompt AS dedup_prompt FROM sessions s "
+            "LEFT JOIN system_prompts sp ON sp.hash = s.system_prompt_hash "
+            "WHERE s.id=?", (sid,)).fetchone()
+        if row:
+            sysprompt = row["system_prompt"] or row["dedup_prompt"] or None
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\evals\postmortem\forensics\common.py | Line 159 ===
+
+    def system_prompt_len(self, sid: str) -> int:
+        h = self.sessions[sid].get("system_prompt_hash")
+        if not h:
+            return 0
+        r = self._conn.execute("SELECT length(prompt) AS n FROM system_prompts WHERE hash=?", (h,)).fetchone()
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\evals\postmortem\forensics\common.py | Line 162 ===
+        if not h:
+            return 0
+        r = self._conn.execute("SELECT length(prompt) AS n FROM system_prompts WHERE hash=?", (h,)).fetchone()
+        return int(r["n"]) if r else 0
+
+    def by_depth(self) -> dict[int, list[str]]:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\evals\postmortem\tests\test_postmortem_harness.py | Line 22 ===
+    CREATE TABLE sessions(id TEXT PRIMARY KEY, parent_session_id TEXT, source TEXT, started_at REAL, ended_at REAL,
+        api_call_count INTEGER, input_tokens INTEGER, cache_read_tokens INTEGER, cache_write_tokens INTEGER,
+        output_tokens INTEGER, estimated_cost_usd REAL, system_prompt_hash TEXT);
+    CREATE TABLE system_prompts(hash TEXT PRIMARY KEY, prompt TEXT);
+    CREATE TABLE messages(id INTEGER PRIMARY KEY, session_id TEXT, role TEXT, content TEXT, tool_calls TEXT,
+        tool_name TEXT, reasoning TEXT, timestamp REAL);
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\evals\postmortem\tests\test_postmortem_harness.py | Line 23 ===
+        api_call_count INTEGER, input_tokens INTEGER, cache_read_tokens INTEGER, cache_write_tokens INTEGER,
+        output_tokens INTEGER, estimated_cost_usd REAL, system_prompt_hash TEXT);
+    CREATE TABLE system_prompts(hash TEXT PRIMARY KEY, prompt TEXT);
+    CREATE TABLE messages(id INTEGER PRIMARY KEY, session_id TEXT, role TEXT, content TEXT, tool_calls TEXT,
+        tool_name TEXT, reasoning TEXT, timestamp REAL);
+    CREATE TABLE state_meta(key TEXT PRIMARY KEY, value TEXT);
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\evals\postmortem\tests\test_postmortem_harness.py | Line 29 ===
+    """)
+    t0 = time.time() - 4000
+    c.execute("INSERT INTO system_prompts VALUES ('h1', ?)", ("x" * 35_000,))
+
+    def sess(sid, parent, source, start, end, calls, cr, cw, out):
+        cost = cr * 0.2e-6 + cw * 10e-6 + out * 40e-6
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_lost_and_found.py | Line 481 ===
+        "handoff_state": lambda value: value in _HANDOFF_STATES,
+        "parent_session_id": _is_session_id,
+        "system_prompt_hash": lambda value: bool(re.fullmatch(r"[0-9a-f]{64}", value)),
+        "model_config": _is_json_start, "origin_json": _is_json_start,
+        "cwd": _is_path, "git_repo_root": _is_path,
+        "billing_base_url": _is_url,
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_lost_and_found.py | Line 870 ===
+        )
+        dest.execute(
+            "UPDATE sessions SET system_prompt_hash = NULL WHERE system_prompt_hash IS NOT NULL AND NOT EXISTS "
+            "(SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)"
+        )
+        dest.execute(f"UPDATE sessions SET tool_names = NULL WHERE {_DANGLING_TOOL_PIN}")
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_lost_and_found.py | Line 871 ===
+        dest.execute(
+            "UPDATE sessions SET system_prompt_hash = NULL WHERE system_prompt_hash IS NOT NULL AND NOT EXISTS "
+            "(SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)"
+        )
+        dest.execute(f"UPDATE sessions SET tool_names = NULL WHERE {_DANGLING_TOOL_PIN}")
+    return result
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 27 ===
+ProgressCallback = Callable[[dict[str, Any]], None]
+_CANONICAL_TABLES = (
+    "system_prompts", "sessions", "messages", "session_model_usage", "compression_locks", "gateway_routing",
+    "async_delegations",
+)
+_TOPIC_TABLES = ("telegram_dm_topic_mode", "telegram_dm_topic_bindings")
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 754 ===
+_DEPENDENT_TABLES = ("messages", "session_model_usage", "compression_locks", "telegram_dm_topic_bindings")
+_DANGLING_TOOL_PIN = (
+    "length(tool_names) = 64 AND NOT EXISTS (SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.tool_names)")
+_RELINK_COUNTERS = ("session_prompt_refs_cleared", "sessions_parent_cleared")
+
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 762 ===
+    session row (placeholders are rebuilt first); only rows still orphaned after that are removed."""
+    result: dict[str, Any] = {
+        "session_prompt_refs_cleared": 0, "system_prompts_removed": 0, "sessions_parent_cleared": 0,
+        "sessions_reconstructed": 0, "messages_retained": 0,
+        **{f"{table}_removed": 0 for table in _DEPENDENT_TABLES},
+    }
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 777 ===
+        result["session_prompt_refs_cleared"] = _reconcile(
+            destination, "sessions",
+            "system_prompt_hash IS NOT NULL AND NOT EXISTS ("
+            "SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)",
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 778 ===
+            destination, "sessions",
+            "system_prompt_hash IS NOT NULL AND NOT EXISTS ("
+            "SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)",
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+        # A tools[] pin is a system_prompts row too, referenced by hash from sessions.tool_names
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 779 ===
+            "system_prompt_hash IS NOT NULL AND NOT EXISTS ("
+            "SELECT 1 FROM system_prompts WHERE system_prompts.hash = sessions.system_prompt_hash)",
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+        # A tools[] pin is a system_prompts row too, referenced by hash from sessions.tool_names
+        # (legacy rows hold an inline JSON list, never 64 chars of hex).
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 781 ===
+            "UPDATE sessions SET system_prompt_hash = NULL",
+        )
+        # A tools[] pin is a system_prompts row too, referenced by hash from sessions.tool_names
+        # (legacy rows hold an inline JSON list, never 64 chars of hex).
+        result["session_prompt_refs_cleared"] += _reconcile(
+            destination, "sessions",
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 788 ===
+            "UPDATE sessions SET tool_names = NULL",
+        )
+        result["system_prompts_removed"] = _reconcile(
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 789 ===
+        )
+        result["system_prompts_removed"] = _reconcile(
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 790 ===
+        result["system_prompts_removed"] = _reconcile(
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+        )
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 791 ===
+            destination, "system_prompts",
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+        )
+        for table in _DEPENDENT_TABLES:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_recovery.py | Line 792 ===
+            "NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.system_prompt_hash = system_prompts.hash) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.tool_names = system_prompts.hash)",
+            "DELETE FROM system_prompts",
+        )
+        for table in _DEPENDENT_TABLES:
+            if _table_columns(destination, table):
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\hermes_cli\session_schema_history.py | Line 197 ===
+            ('+', 'last_activity_provenance', 'last_activity_description'),
+        )),
+        ('20 2026-08-03T15:07Z 7d066c3c56', (('+', 'system_prompt_hash', 'system_prompt'),)),
+        ('21 2026-08-04T19:20Z d98287fe3c', (('+', 'last_read_at', 'pinned'),)),
+        ('22 2026-08-08T22:17Z fe42097865', (('+', 'title_source', 'title'),)),
+        ('23 2026-08-15T07:31Z fbaea9bddc', (('+', 'hidden', 'pinned'),)),
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\agent\test_length_continuation_thinking_exhaustion.py | Line 298 ===
+            f"reasoning must be restored on the very next request; got {wire!r}"
+        )
+        system_prompts = {
+            c.kwargs["messages"][0]["content"] for c in calls
+            if c.kwargs["messages"][0].get("role") == "system"
+        }
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\agent\test_length_continuation_thinking_exhaustion.py | Line 302 ===
+            if c.kwargs["messages"][0].get("role") == "system"
+        }
+        assert len(system_prompts) == 1, (
+            "system prompt must be byte-identical across the retry sequence "
+            "(the override may only change request parameters, never the prefix)"
+        )
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\gateway\test_managed_worker_construct.py | Line 170 ===
+        system = [m['content'] for m in request['messages'] if m['role'] == 'system']
+        prefill = [m['content'] for m in request['messages'] if 'PREFILL_' in str(m.get('content'))]
+        [(stored,)] = servers.query('SELECT p.prompt FROM sessions s JOIN system_prompts p '
+                                    'ON p.hash = s.system_prompt_hash WHERE s.id=?', (sid,))
+        return {'system_mark': [('SYS_PROMPT_MARK' in s) for s in system], 'prefill': prefill,
+                'stored': 'SYS_PROMPT_MARK' in stored}
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\gateway\test_managed_worker_construct.py | Line 171 ===
+        prefill = [m['content'] for m in request['messages'] if 'PREFILL_' in str(m.get('content'))]
+        [(stored,)] = servers.query('SELECT p.prompt FROM sessions s JOIN system_prompts p '
+                                    'ON p.hash = s.system_prompt_hash WHERE s.id=?', (sid,))
+        return {'system_mark': [('SYS_PROMPT_MARK' in s) for s in system], 'prefill': prefill,
+                'stored': 'SYS_PROMPT_MARK' in stored}
+    results = run_pair(tmp_path, extra, turn)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\gateway\test_tui_context_breakdown_scope.py | Line 97 ===
+@pytest.mark.asyncio
+async def test_agentless_breakdown_survives_a_swept_tools_pin(owner):
+    """A pin hash whose ``system_prompts`` row was swept resolves to the bare hash: no tools, no error."""
+    sid, stored = await _agentless_session(owner, 'swept', {'version': 'v', 'tools': [
+        {'type': 'function', 'function': {'name': 'terminal', 'parameters': {'type': 'object'}}}]})
+    owner.authority.db._execute_write(lambda conn: conn.execute(
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\gateway\test_tui_context_breakdown_scope.py | Line 101 ===
+        {'type': 'function', 'function': {'name': 'terminal', 'parameters': {'type': 'object'}}}]})
+    owner.authority.db._execute_write(lambda conn: conn.execute(
+        'DELETE FROM system_prompts WHERE hash = (SELECT tool_names FROM sessions WHERE id = ?)', (stored,)))
+    actual = await owner.call('session.context_breakdown', session_id=sid)
+    assert {c['id'] for c in actual['categories']} == {'system_prompt', 'conversation'}, actual
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_browse_schema_drift.py | Line 644 ===
+    path = _lagging_store_with_history(_profile_home(tmp_path), rows=10)
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("INSERT INTO system_prompts(hash, prompt) VALUES ('abc', 'retained prompt')")
+        conn.execute("ALTER TABLE system_prompts DROP COLUMN prompt")
+        conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_browse_schema_drift.py | Line 645 ===
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("INSERT INTO system_prompts(hash, prompt) VALUES ('abc', 'retained prompt')")
+        conn.execute("ALTER TABLE system_prompts DROP COLUMN prompt")
+        conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    before = _file_state(path)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_browse_schema_drift.py | Line 653 ===
+        _open_session_db_at_path(path, read_only=True).close()
+    assert caught.value.status_code == 503
+    assert "system_prompts.prompt" in str(caught.value.detail)
+    assert "nothing was changed" in str(caught.value.detail)
+    assert _file_state(path) == before
+    assert "last_read_at" not in _session_columns(path)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 611 ===
+        row = conn.execute(
+            "SELECT rootpage FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'system_prompts'"
+        ).fetchone()
+        assert row is not None
+        prompt_root = int(row[0])
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 631 ===
+    assert report["copy"]["sessions"]["status"] == "complete"
+    assert report["copy"]["messages"]["status"] == "complete"
+    assert report["copy"]["system_prompts"]["status"] == "partial"
+    cleared = report["orphan_cleanup"]["session_prompt_refs_cleared"]
+    assert 0 < cleared < session_count
+    assert report["verification"]["foreign_key_check"] == []
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 642 ===
+        assert conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0] == session_count
+        retained = conn.execute(
+            "SELECT COUNT(*) FROM sessions WHERE system_prompt_hash IS NOT NULL"
+        ).fetchone()[0]
+        assert retained == session_count - cleared
+        assert (
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery.py | Line 646 ===
+        assert retained == session_count - cleared
+        assert (
+            conn.execute("SELECT COUNT(*) FROM system_prompts").fetchone()[0]
+            == retained
+        )
+    finally:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_recovery_lost_and_found.py | Line 956 ===
+    "compression_failure_error", "display_name", "origin_json",
+    "expiry_finalized", "compression_fallback_streak", "profile_name",
+    "compression_ineffective_count", "pinned", "system_prompt_hash",
+    "last_activity_at", "last_activity_description",
+    "last_activity_provenance", "git_metadata_generation", "title_source",
+    "hidden", "last_read_at",
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 24 ===
+def _prompt_count(db: SessionDB) -> int:
+    return int(
+        db._conn.execute("SELECT COUNT(*) FROM system_prompts").fetchone()[0]
+    )
+
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 42 ===
+
+    stored = db._conn.execute(
+        "SELECT hash, prompt FROM system_prompts"
+    ).fetchall()
+    assert len(stored) == 1
+    assert stored[0]["prompt"] == prompt
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 47 ===
+    assert stored[0]["prompt"] == prompt
+    raw_sessions = db._conn.execute(
+        "SELECT system_prompt, system_prompt_hash FROM sessions ORDER BY id"
+    ).fetchall()
+    assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+    assert {row["system_prompt_hash"] for row in raw_sessions} == {
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 50 ===
+    ).fetchall()
+    assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+    assert {row["system_prompt_hash"] for row in raw_sessions} == {
+        stored[0]["hash"]
+    }
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 110 ===
+    prompts = [
+        row["prompt"]
+        for row in db._conn.execute("SELECT prompt FROM system_prompts")
+    ]
+    assert prompts == ["original prompt"]
+    assert db.get_session("s1")["system_prompt"] == "original prompt"
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 183 ===
+
+    raw = db._conn.execute(
+        "SELECT system_prompt, system_prompt_hash FROM sessions WHERE id = 'child'"
+    ).fetchone()
+    assert raw["system_prompt"] is None
+    assert raw["system_prompt_hash"] is not None
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 186 ===
+    ).fetchone()
+    assert raw["system_prompt"] is None
+    assert raw["system_prompt_hash"] is not None
+    assert db.get_session("child")["system_prompt"] == prompt
+    assert _prompt_count(db) == 1
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 245 ===
+        assert _prompt_count(target) == 1
+        raw = target._conn.execute(
+            "SELECT system_prompt, system_prompt_hash FROM sessions ORDER BY id"
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw}) == 1
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 248 ===
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw}) == 1
+        assert target.get_session("s1")["system_prompt"] == prompt
+        assert target.get_session("s2")["system_prompt"] == prompt
+    finally:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 263 ===
+    db.create_session("s2", "telegram")
+    db._conn.execute(
+        "UPDATE sessions SET system_prompt = ?, system_prompt_hash = NULL",
+        (legacy_prompt,),
+    )
+    db._conn.execute("UPDATE schema_version SET version = 24")
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 276 ===
+        assert _prompt_count(migrated) == 1
+        raw_sessions = migrated._conn.execute(
+            "SELECT system_prompt, system_prompt_hash FROM sessions ORDER BY id"
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw_sessions}) == 1
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 279 ===
+        ).fetchall()
+        assert [row["system_prompt"] for row in raw_sessions] == [None, None]
+        assert len({row["system_prompt_hash"] for row in raw_sessions}) == 1
+        assert migrated._conn.execute(
+            "SELECT version FROM schema_version LIMIT 1"
+        ).fetchone()[0] == SCHEMA_VERSION
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 291 ===
+
+    def deny_prompt_reads(action, table, column, database, trigger):
+        if action == sqlite3.SQLITE_READ and table == "system_prompts":
+            return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 308 ===
+    assert rich["id"] == "s1"
+    assert "system_prompt" not in rows[0]
+    assert "system_prompt_hash" not in rows[0]
+    assert "system_prompt" not in rich
+    assert "system_prompt_hash" not in rich
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_cli\test_session_system_prompt_dedup.py | Line 310 ===
+    assert "system_prompt_hash" not in rows[0]
+    assert "system_prompt" not in rich
+    assert "system_prompt_hash" not in rich
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 4 ===
+
+Enterprise field report (2026-08-14): with state.db locked by another process,
+``_dedupe_legacy_system_prompts`` raised ``sqlite3.OperationalError``
+mid-loop (only the initial SELECT was guarded), which aborted schema init,
+left the schema version below 25, and made EVERY subsequent
+``SessionDB.__init__`` re-enter the same blocking migration — the fuel of
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 41 ===
+        )
+        cur.execute(
+            "UPDATE sessions SET system_prompt = ?, system_prompt_hash = NULL "
+            "WHERE id = ?",
+            (f"legacy prompt {i}", f"sess-{i}"),
+        )
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 82 ===
+        proxy = _FailAfterN(raw, fail_after=2)
+        # Must NOT raise even though the third UPDATE hits "database is locked".
+        db._dedupe_legacy_system_prompts(proxy)
+        conn.commit()
+
+        rows = raw.execute(
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 86 ===
+
+        rows = raw.execute(
+            "SELECT id, system_prompt, system_prompt_hash FROM sessions "
+            "WHERE id LIKE 'sess-%' ORDER BY id"
+        ).fetchall()
+        migrated = [r for r in rows if r["system_prompt"] is None]
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 94 ===
+        assert legacy, "expected unmigrated remainder after the failure"
+        # Migrated rows carry a hash; legacy rows keep their readable prompt.
+        assert all(r["system_prompt_hash"] for r in migrated)
+        assert all(r["system_prompt"].startswith("legacy prompt") for r in legacy)
+        conn.close()
+    finally:
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 108 ===
+        conn.row_factory = sqlite3.Row
+        raw = conn.cursor()
+        db._dedupe_legacy_system_prompts(_FailAfterN(raw, fail_after=2))
+        conn.commit()
+        # Second run with no failures finishes the job.
+        db._dedupe_legacy_system_prompts(raw)
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_dedupe_migration_contention.py | Line 111 ===
+        conn.commit()
+        # Second run with no failures finishes the job.
+        db._dedupe_legacy_system_prompts(raw)
+        conn.commit()
+        remaining = raw.execute(
+            "SELECT COUNT(*) FROM sessions "
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_runtime_worker_metadata.py | Line 62 ===
+        assert row['system_prompt'] == 'stable-prefix'
+        with db._read_ctx() as conn:
+            assert conn.execute('SELECT COUNT(*) FROM system_prompts WHERE prompt=?', ('stable-prefix',)).fetchone()[0] == 1
+        store.append_messages_batch('owned', [{'role': 'user', 'content': [{'type': 'text', 'text': 'visible'}]}])
+        assert store.set_latest_user_api_content('owned', 'wrong', 'must-not-land') == 0
+        assert store.set_latest_user_api_content('owned', [{'type': 'text', 'text': 'visible'}], 'wire-only') == 1
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\hermes_state\test_state_db_repair_live_writer_guard.py | Line 5 ===
+
+Incident (2026-08-18/19): FTS5 shadow-table corruption escalated into b-tree
+page damage across `system_prompts`, `session_model_usage` and the `sessions`
+index. `repair_state_db_schema` ran its REINDEX/FTS-rebuild strategies while
+other connections still held the database open. The caller closes only its own
+`self._conn`; the incident process held seven descriptors on state.db.
+
+=== NEW | C:\Users\HermesAgent\AppData\Local\hermes\hermes-agent\tests\tools\test_refresh_agent_mcp_tools.py | Line 440 ===
+            _mcp_agent.persist_agent_tool_names(sent)
+        # Stored once, like the system prompt: a ~50KB array per session row would bloat state.db.
+        stored = db._conn.execute("SELECT COUNT(*) FROM system_prompts").fetchone()[0]
+
+        resumed = _agent([])
+        resumed.tools, resumed._session_db, resumed.session_id = list(this_surface), db, "s1"
+
