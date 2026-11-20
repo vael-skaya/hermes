@@ -1,0 +1,150 @@
+
+=== OLD ===
+
+TABLE: system_prompts
+column=hash | type=TEXT | notnull=0 | pk=1
+column=prompt | type=TEXT | notnull=1 | pk=0
+
+TABLE: sessions
+column=id | type=TEXT | notnull=0 | pk=1
+column=source | type=TEXT | notnull=1 | pk=0
+column=created_source | type=TEXT | notnull=0 | pk=0
+column=user_id | type=TEXT | notnull=0 | pk=0
+column=session_key | type=TEXT | notnull=0 | pk=0
+column=chat_id | type=TEXT | notnull=0 | pk=0
+column=chat_type | type=TEXT | notnull=0 | pk=0
+column=thread_id | type=TEXT | notnull=0 | pk=0
+column=display_name | type=TEXT | notnull=0 | pk=0
+column=origin_json | type=TEXT | notnull=0 | pk=0
+column=expiry_finalized | type=INTEGER | notnull=0 | pk=0
+column=model | type=TEXT | notnull=0 | pk=0
+column=model_config | type=TEXT | notnull=0 | pk=0
+column=system_prompt | type=TEXT | notnull=0 | pk=0
+column=system_prompt_hash | type=TEXT | notnull=0 | pk=0
+column=parent_session_id | type=TEXT | notnull=0 | pk=0
+column=started_at | type=REAL | notnull=1 | pk=0
+column=ended_at | type=REAL | notnull=0 | pk=0
+column=end_reason | type=TEXT | notnull=0 | pk=0
+column=message_count | type=INTEGER | notnull=0 | pk=0
+column=tool_call_count | type=INTEGER | notnull=0 | pk=0
+column=input_tokens | type=INTEGER | notnull=0 | pk=0
+column=output_tokens | type=INTEGER | notnull=0 | pk=0
+column=cache_read_tokens | type=INTEGER | notnull=0 | pk=0
+column=cache_write_tokens | type=INTEGER | notnull=0 | pk=0
+column=reasoning_tokens | type=INTEGER | notnull=0 | pk=0
+column=cwd | type=TEXT | notnull=0 | pk=0
+column=git_branch | type=TEXT | notnull=0 | pk=0
+column=git_repo_root | type=TEXT | notnull=0 | pk=0
+column=git_metadata_generation | type=INTEGER | notnull=1 | pk=0
+column=billing_provider | type=TEXT | notnull=0 | pk=0
+column=billing_base_url | type=TEXT | notnull=0 | pk=0
+column=billing_mode | type=TEXT | notnull=0 | pk=0
+column=estimated_cost_usd | type=REAL | notnull=0 | pk=0
+column=actual_cost_usd | type=REAL | notnull=0 | pk=0
+column=cost_status | type=TEXT | notnull=0 | pk=0
+column=cost_source | type=TEXT | notnull=0 | pk=0
+column=pricing_version | type=TEXT | notnull=0 | pk=0
+column=title | type=TEXT | notnull=0 | pk=0
+column=title_source | type=TEXT | notnull=0 | pk=0
+column=last_activity_at | type=REAL | notnull=0 | pk=0
+column=last_activity_description | type=TEXT | notnull=0 | pk=0
+column=last_activity_provenance | type=TEXT | notnull=0 | pk=0
+column=api_call_count | type=INTEGER | notnull=0 | pk=0
+column=handoff_state | type=TEXT | notnull=0 | pk=0
+column=handoff_platform | type=TEXT | notnull=0 | pk=0
+column=handoff_error | type=TEXT | notnull=0 | pk=0
+column=compression_failure_cooldown_until | type=REAL | notnull=0 | pk=0
+column=compression_failure_error | type=TEXT | notnull=0 | pk=0
+column=compression_fallback_streak | type=INTEGER | notnull=1 | pk=0
+column=compression_ineffective_count | type=INTEGER | notnull=1 | pk=0
+column=compression_recovery_deadline | type=REAL | notnull=0 | pk=0
+column=compression_overload_streak | type=INTEGER | notnull=1 | pk=0
+column=profile_name | type=TEXT | notnull=0 | pk=0
+column=transport_profile | type=TEXT | notnull=0 | pk=0
+column=rewind_count | type=INTEGER | notnull=1 | pk=0
+column=archived | type=INTEGER | notnull=1 | pk=0
+column=auto_archived | type=INTEGER | notnull=1 | pk=0
+column=pinned | type=INTEGER | notnull=1 | pk=0
+column=hidden | type=INTEGER | notnull=1 | pk=0
+column=last_read_at | type=REAL | notnull=0 | pk=0
+column=tool_names | type=TEXT | notnull=0 | pk=0
+column=runtime_revision | type=INTEGER | notnull=1 | pk=0
+column=runtime_generation | type=INTEGER | notnull=1 | pk=0
+column=transcript_revision | type=INTEGER | notnull=1 | pk=0
+foreign_key=(0, 0, 'system_prompts', 'system_prompt_hash', 'hash', 'NO ACTION', 'NO ACTION', 'NONE')
+foreign_key=(1, 0, 'sessions', 'parent_session_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+=== NEW ===
+
+TABLE: system_prompts
+column=hash | type=TEXT | notnull=0 | pk=1
+column=prompt | type=TEXT | notnull=1 | pk=0
+
+TABLE: sessions
+column=id | type=TEXT | notnull=0 | pk=1
+column=runtime_revision | type=INTEGER | notnull=1 | pk=0
+column=runtime_generation | type=INTEGER | notnull=1 | pk=0
+column=source | type=TEXT | notnull=1 | pk=0
+column=created_source | type=TEXT | notnull=0 | pk=0
+column=user_id | type=TEXT | notnull=0 | pk=0
+column=session_key | type=TEXT | notnull=0 | pk=0
+column=chat_id | type=TEXT | notnull=0 | pk=0
+column=chat_type | type=TEXT | notnull=0 | pk=0
+column=thread_id | type=TEXT | notnull=0 | pk=0
+column=display_name | type=TEXT | notnull=0 | pk=0
+column=origin_json | type=TEXT | notnull=0 | pk=0
+column=expiry_finalized | type=INTEGER | notnull=0 | pk=0
+column=model | type=TEXT | notnull=0 | pk=0
+column=model_config | type=TEXT | notnull=0 | pk=0
+column=system_prompt | type=TEXT | notnull=0 | pk=0
+column=system_prompt_hash | type=TEXT | notnull=0 | pk=0
+column=parent_session_id | type=TEXT | notnull=0 | pk=0
+column=started_at | type=REAL | notnull=1 | pk=0
+column=ended_at | type=REAL | notnull=0 | pk=0
+column=end_reason | type=TEXT | notnull=0 | pk=0
+column=message_count | type=INTEGER | notnull=0 | pk=0
+column=tool_call_count | type=INTEGER | notnull=0 | pk=0
+column=input_tokens | type=INTEGER | notnull=0 | pk=0
+column=output_tokens | type=INTEGER | notnull=0 | pk=0
+column=cache_read_tokens | type=INTEGER | notnull=0 | pk=0
+column=cache_write_tokens | type=INTEGER | notnull=0 | pk=0
+column=reasoning_tokens | type=INTEGER | notnull=0 | pk=0
+column=cwd | type=TEXT | notnull=0 | pk=0
+column=git_branch | type=TEXT | notnull=0 | pk=0
+column=git_repo_root | type=TEXT | notnull=0 | pk=0
+column=git_metadata_generation | type=INTEGER | notnull=1 | pk=0
+column=billing_provider | type=TEXT | notnull=0 | pk=0
+column=billing_base_url | type=TEXT | notnull=0 | pk=0
+column=billing_mode | type=TEXT | notnull=0 | pk=0
+column=estimated_cost_usd | type=REAL | notnull=0 | pk=0
+column=actual_cost_usd | type=REAL | notnull=0 | pk=0
+column=cost_status | type=TEXT | notnull=0 | pk=0
+column=cost_source | type=TEXT | notnull=0 | pk=0
+column=pricing_version | type=TEXT | notnull=0 | pk=0
+column=title | type=TEXT | notnull=0 | pk=0
+column=title_source | type=TEXT | notnull=0 | pk=0
+column=last_activity_at | type=REAL | notnull=0 | pk=0
+column=last_activity_description | type=TEXT | notnull=0 | pk=0
+column=last_activity_provenance | type=TEXT | notnull=0 | pk=0
+column=api_call_count | type=INTEGER | notnull=0 | pk=0
+column=handoff_state | type=TEXT | notnull=0 | pk=0
+column=handoff_platform | type=TEXT | notnull=0 | pk=0
+column=handoff_error | type=TEXT | notnull=0 | pk=0
+column=compression_failure_cooldown_until | type=REAL | notnull=0 | pk=0
+column=compression_failure_error | type=TEXT | notnull=0 | pk=0
+column=compression_fallback_streak | type=INTEGER | notnull=1 | pk=0
+column=compression_ineffective_count | type=INTEGER | notnull=1 | pk=0
+column=compression_recovery_deadline | type=REAL | notnull=0 | pk=0
+column=compression_overload_streak | type=INTEGER | notnull=1 | pk=0
+column=profile_name | type=TEXT | notnull=0 | pk=0
+column=transport_profile | type=TEXT | notnull=0 | pk=0
+column=rewind_count | type=INTEGER | notnull=1 | pk=0
+column=archived | type=INTEGER | notnull=1 | pk=0
+column=auto_archived | type=INTEGER | notnull=1 | pk=0
+column=pinned | type=INTEGER | notnull=1 | pk=0
+column=hidden | type=INTEGER | notnull=1 | pk=0
+column=last_read_at | type=REAL | notnull=0 | pk=0
+column=tool_names | type=TEXT | notnull=0 | pk=0
+column=transcript_revision | type=INTEGER | notnull=1 | pk=0
+foreign_key=(0, 0, 'system_prompts', 'system_prompt_hash', 'hash', 'NO ACTION', 'NO ACTION', 'NONE')
+foreign_key=(1, 0, 'sessions', 'parent_session_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')
