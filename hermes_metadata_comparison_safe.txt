@@ -1,0 +1,50 @@
+
+=== OLD ===
+
+STATE_META
+db_file_generation: length=32, sha256=bfa3eace57b61517
+fts_storage_version: length=1, sha256=4e07408562bedb8b
+gateway.admission.result.v1.43b9d02f1edd4d28829fa3e0b329a7b4: length=370737, sha256=06a89424ee4bfea0
+gateway.admission.result.v1.6069b1628490496bb04e2c760c3e2ce4: length=176386, sha256=876624fc875db49f
+gateway.admission.result.v1.b17538f9589946f28acf2cd036d272a9: length=117659, sha256=9efcd1468c7cc30f
+gateway.admission.result.v1.ca2ba4b8686d4c66a7d977e5ada475cb: length=994202, sha256=ea887e36d51ac59c
+gateway.admission.result.v1.db5bbf1c007e4f0987d6eea9cfa0f17c: length=143994, sha256=682780b45cd449b2
+gateway.admission.result.v1.e6ba6632b3a844d8a633d33f1e3d6b56: length=75738, sha256=5d6d130d352659c4
+gateway.admission.result.v1.ff73962d70c844f1955d847a982c8c52: length=25659, sha256=4b80ed4fbf3fa065
+gateway.local_legacy.v1:20261013_123926_e34fed: length=208, sha256=d02d35e0e5aaa3f6
+gateway.local_policy.v1:20261013_123926_e34fed: length=9356, sha256=072c928e6d88e9c3
+gateway.local_policy.v1:local-3081c42f09f57cdeb48775e2e9e994ad7b8a35b493ef4e214cc2ecbaebda9931: length=9735, sha256=99c6263ed177f51f
+gateway.local_policy.v1:local-9da59632fafdd6dcfa1c55fcb1b285a8df653fe13f97328d998d14b0f662c6de: length=9555, sha256=3b9f0a3dd83a24ed
+ghost_session_prune_v1: length=1, sha256=6b86b273ff34fce1
+last_auto_prune: length=18, sha256=03df5d6e3eaf7c29
+message_uid_backfill: length=1, sha256=6b86b273ff34fce1
+orphaned_compression_finalize_v1: length=1, sha256=6b86b273ff34fce1
+store_created_at_utc: length=32, sha256=c6010f8ab102db16
+store_instance_id: length=36, sha256=ef0a01b69efef2c8
+
+SYSTEM_PROMPTS
+Columns: ['hash', 'prompt']
+Row 1: {'hash': 'length=64, sha256=6177adb6a87dbd36', 'prompt': 'length=36265, sha256=9de56306ade85de9'}
+Row 2: {'hash': 'length=64, sha256=4ac76fa1833e6d03', 'prompt': 'length=49526, sha256=112a1953c6f7fb58'}
+Row 3: {'hash': 'length=64, sha256=be0634578314c0ca', 'prompt': 'length=49903, sha256=e86f44556d936c87'}
+Row 4: {'hash': 'length=64, sha256=a61e9d395b049827', 'prompt': 'length=39968, sha256=319dfd0ae1783763'}
+Row 5: {'hash': 'length=64, sha256=f26bcc85bb6f3d7c', 'prompt': 'length=37871, sha256=271c21fa32345d08'}
+Row 6: {'hash': 'length=64, sha256=bdebf773ce35e1ef', 'prompt': 'length=36912, sha256=23df2715d705523a'}
+Row 7: {'hash': 'length=64, sha256=9032f5abce81c599', 'prompt': 'length=37866, sha256=6c12ad013ae78ca5'}
+
+=== NEW ===
+
+STATE_META
+db_file_generation: length=32, sha256=0de70d8ad447ba1a
+fts_storage_version: length=1, sha256=4e07408562bedb8b
+gateway.admission.result.v1.05274e4f0f3c4b9ca1216f4f8faa9a32: length=3867, sha256=25bf82b2bbcad4db
+gateway.local_policy.v1:local-facbbd6ad05760d39a6c619378c5b6a2b5863b35bff5df46035d412fe94194c2: length=7206, sha256=ae36afd8401fa042
+legacy_refusal_repair: length=1, sha256=6b86b273ff34fce1
+message_uid_backfill: length=1, sha256=6b86b273ff34fce1
+store_created_at_utc: length=32, sha256=50e9616bbb30546d
+store_instance_id: length=36, sha256=70cdc54c54b24cc5
+
+SYSTEM_PROMPTS
+Columns: ['hash', 'prompt']
+Row 1: {'hash': 'length=64, sha256=a91a07e0be4363d7', 'prompt': 'length=12597, sha256=2e77c95baf28c089'}
+Row 2: {'hash': 'length=64, sha256=4da83b7b4462fae9', 'prompt': 'length=42915, sha256=104a359258f14117'}
