@@ -1,0 +1,13 @@
+
+=== OLD ===
+hash=112a1953c6f7fb5823128941ab87e39463938754dcd21d32f44ce59742eb7bc6 | chars=49526 | session_refs=0 | tool_refs=1
+hash=23df2715d705523a37b57f925880d329da1f1cb118d32a9b4911f45d69d479b3 | chars=36912 | session_refs=0 | tool_refs=2
+hash=271c21fa32345d08231462589d56bad25db19385a4e22c8bd788c1cefe7a1cf2 | chars=37369 | session_refs=1 | tool_refs=0
+hash=319dfd0ae1783763b2c41f98d53821a834a56aadb854e659c541076ef4b1d94e | chars=39452 | session_refs=1 | tool_refs=0
+hash=6c12ad013ae78ca5408314e655b924ce8a84c87cc0b7209f5b89accfbf631139 | chars=37364 | session_refs=1 | tool_refs=0
+hash=9de56306ade85de9685a383055b8c0311f9df757a392c9e6ce26ef81048e9282 | chars=36133 | session_refs=1 | tool_refs=0
+hash=e86f44556d936c87e68da7772a722400f8d0603df03bb1bb898816094422f3d9 | chars=49903 | session_refs=0 | tool_refs=1
+
+=== NEW ===
+hash=104a359258f141170205f13f086be94ee8cd8713e1423ecb5d2a09b6d8191744 | chars=42915 | session_refs=0 | tool_refs=1
+hash=2e77c95baf28c089f3864b359393793029ea58d6af963419718ff2f2eb285c93 | chars=12531 | session_refs=1 | tool_refs=0
